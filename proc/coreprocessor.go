@@ -26,6 +26,9 @@ func (d *coreURLsProcessor) makeRequests(in <-chan string) <-chan *http.Request 
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error: url %q -> %v\n", u, err)
 			} else {
+				if a := os.Getenv("USER_AGENT"); a != "" {
+					r.Header.Set("User-Agent", a)
+				}
 				out <- r
 			}
 		}

@@ -1,9 +1,10 @@
 package proc
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 
 	"golang.org/x/net/html"
 
@@ -60,7 +61,7 @@ func (d *extractURLsProcessor) getLinks(in <-chan *http.Response) <-chan *data.L
 				tt := z.Next()
 				switch tt {
 				case html.ErrorToken:
-					log.Printf("HTML ERROR: %v\n", z.Err())
+					fmt.Fprintf(os.Stderr, "HTML ERROR: %v\n", z.Err())
 					continue responseLoop
 				case html.TextToken:
 					if inLink {
@@ -78,7 +79,7 @@ func (d *extractURLsProcessor) getLinks(in <-chan *http.Response) <-chan *data.L
 									inLink = true
 									link = u
 								} else {
-									log.Printf("error: %v", err)
+									fmt.Fprintf(os.Stderr, "error: %v\n", err)
 								}
 							}
 							if !more || inLink {
