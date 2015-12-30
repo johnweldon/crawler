@@ -16,13 +16,13 @@ import (
 )
 
 func main() {
-	urls := os.Getenv("URL_FILE")
-	if urls == "" {
+	source := os.Getenv("URL_FILE")
+	if source == "" {
 		fmt.Fprintf(os.Stderr, "no URL_FILE specified")
 		return
 	}
 
-	gen, err := gen.NewConfigFileReader(urls)
+	gen, err := gen.NewConfigFileReader(source)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		return
