@@ -62,7 +62,7 @@ func (p *ExtractTablesProcessor) getTables(in <-chan *http.Response) <-chan *dat
 					continue responseLoop
 				case html.TextToken:
 					if inTD || inTH {
-						name = strings.TrimSpace(string(z.Text()))
+						name = fmt.Sprintf("%s %s", name, strings.TrimSpace(string(z.Text())))
 					}
 				case html.StartTagToken:
 					tn, _ := z.TagName()
@@ -94,12 +94,16 @@ func (p *ExtractTablesProcessor) getTables(in <-chan *http.Response) <-chan *dat
 						count++
 						inTable = false
 					case "td":
-						row = append(row, name)
+						row = append(row, strings.TrimSpace(name))
 						inTD = false
 					case "th":
 						head = append(head, name)
 						inTH = false
 					case "tr":
+						if !inTable {
+							table = &data.Table{Name: doc, Ordinal: count}
+							inTable = true
+						}
 						if len(head) > 0 {
 							table.Header = head
 						}
