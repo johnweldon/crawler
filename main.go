@@ -2,163 +2,92 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
+	"unicode"
 
-	"golang.org/x/net/html"
+	"github.com/johnweldon/crawler/data"
+	"github.com/johnweldon/crawler/gen"
+	"github.com/johnweldon/crawler/proc"
 )
 
 func main() {
+	urls := os.Getenv("URL_FILE")
+	if urls == "" {
+		fmt.Fprintf(os.Stderr, "no URL_FILE specified")
+		return
+	}
 
-	gen, err := newConfigFileReader("urls.txt")
+	gen, err := gen.NewConfigFileReader(urls)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		return
 	}
 
-	processor := newDumpProcessor()
+	urls := map[string]interface{}{}
+	processor := proc.NewExtractURLsProcessor(data.NewLinkInTableFilter())
 	for result := range processor.Process(gen.Start()) {
-		fmt.Fprintf(os.Stdout, "url: %s\n", result)
+		urls[result] = nil
 	}
 
+	client := &http.Client{}
+	for k, _ := range urls {
+		dump(client, k)
+	}
 }
 
-type Link struct {
-	Name string
-	URL  *url.URL
-}
-
-type UrlGenerator interface {
-	Start() <-chan string
-}
-
-type UrlProcessor interface {
-	Process(in <-chan string) <-chan string
-}
-
-type UrlFilter interface {
-	Pass(Link) bool
-}
-
-type dumpProcessor struct {
-	Client *http.Client
-	out    chan string
-}
-
-func newDumpProcessor() UrlProcessor {
-	return &dumpProcessor{Client: &http.Client{}, out: make(chan string)}
-}
-
-func (d *dumpProcessor) Process(in <-chan string) <-chan string {
-	go func() {
-		for r := range getURLs(getResponse(makeRequests(in), d.Client)) {
-			d.out <- r
-		}
-		d.cleanup(nil)
-	}()
-	return d.out
-}
-
-func (d *dumpProcessor) cleanup(err error) {
+func dump(c *http.Client, link string) {
+	u, err := url.Parse(link)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error with link: %q, %v", link, err)
+		return
 	}
-	close(d.out)
+
+	p := spaceMap(filepath.Base(u.Path))
+
+	f, err := os.Create(p)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error creating file: %q, %v", p, err)
+		return
+	}
+	defer f.Close()
+
+	req, err := http.NewRequest("GET", link, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error downloading link: %q, %v", link, err)
+		return
+	}
+
+	if a := os.Getenv("USER_AGENT"); a != "" {
+		req.Header.Set("User-Agent", a)
+	}
+
+	r, err := c.Do(req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error downloading link: %q, %v", link, err)
+		return
+	}
+	defer r.Body.Close()
+
+	_, err = io.Copy(f, r.Body)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error saving link: %q, %v", link, err)
+		return
+	}
+
+	return
 }
 
-func makeRequests(in <-chan string) <-chan *http.Request {
-	out := make(chan *http.Request)
-	go func() {
-		for u := range in {
-			r, err := http.NewRequest("GET", u, nil)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error: url %q -> %v\n", u, err)
-			} else {
-				out <- r
-			}
+// adapted from http://stackoverflow.com/a/32081891/102371
+func spaceMap(str string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return '_'
 		}
-		close(out)
-	}()
-	return out
-}
-
-func getResponse(in <-chan *http.Request, client *http.Client) <-chan *http.Response {
-	out := make(chan *http.Response)
-	go func() {
-		for r := range in {
-			resp, err := client.Do(r)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			} else {
-				out <- resp
-			}
-		}
-		close(out)
-	}()
-	return out
-}
-
-func getURLs(in <-chan *http.Response) <-chan string {
-	out := make(chan string)
-
-	go func() {
-		defer close(out)
-
-	responseLoop:
-		for r := range in {
-			z := html.NewTokenizer(r.Body)
-
-			var inLink bool
-			var link *url.URL
-			var name string
-
-			for {
-				tt := z.Next()
-				switch tt {
-				case html.ErrorToken:
-					log.Printf("HTML ERROR: %v\n", z.Err())
-					continue responseLoop
-				case html.TextToken:
-					if inLink {
-						name = string(z.Text())
-					}
-				case html.StartTagToken:
-					tn, a := z.TagName()
-					if len(tn) == 1 && tn[0] == 'a' && a {
-						for {
-							attr, val, more := z.TagAttr()
-							if len(attr) == 4 && string(attr) == "href" {
-								u, err := url.Parse(string(val))
-								if err == nil {
-									inLink = true
-									link = u
-								} else {
-									log.Printf("error: %v", err)
-								}
-							}
-							if !more || inLink {
-								break
-							}
-						}
-					}
-				case html.EndTagToken:
-					tn, _ := z.TagName()
-					if len(tn) == 1 && tn[0] == 'a' {
-						if inLink {
-							out <- fmt.Sprintf("%q:%q", name, link)
-							name = ""
-							link = nil
-							inLink = false
-						}
-					}
-				case html.SelfClosingTagToken:
-				case html.CommentToken:
-				case html.DoctypeToken:
-				}
-			}
-		}
-	}()
-	return out
+		return r
+	}, str)
 }

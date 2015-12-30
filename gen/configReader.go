@@ -1,4 +1,4 @@
-package main
+package gen
 
 import (
 	"bufio"
@@ -10,19 +10,6 @@ import (
 type configFileReader struct {
 	fpath string
 	out   chan string
-}
-
-func newConfigFileReader(configFile string) (UrlGenerator, error) {
-	var gen UrlGenerator
-
-	clean := filepath.Clean(configFile)
-	_, err := os.Stat(clean)
-	if err != nil {
-		return gen, err
-	}
-
-	gen = &configFileReader{fpath: clean, out: make(chan string)}
-	return gen, nil
 }
 
 func (r *configFileReader) Start() <-chan string {
@@ -42,4 +29,17 @@ func (r *configFileReader) Start() <-chan string {
 		}
 	}()
 	return r.out
+}
+
+func NewConfigFileReader(configFile string) (UrlGenerator, error) {
+	var gen UrlGenerator
+
+	clean := filepath.Clean(configFile)
+	_, err := os.Stat(clean)
+	if err != nil {
+		return gen, err
+	}
+
+	gen = &configFileReader{fpath: clean, out: make(chan string)}
+	return gen, nil
 }
