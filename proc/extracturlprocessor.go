@@ -12,7 +12,7 @@ import (
 	"github.com/johnweldon/crawler/util"
 )
 
-func NewExtractURLsProcessor(filter data.LinkFilter) UrlProcessor {
+func NewExtractURLsProcessor(filter data.LinkFilter) URLProcessor {
 	return &extractURLsProcessor{
 		coreURLsProcessor: coreURLsProcessor{
 			client: util.WebClient(),

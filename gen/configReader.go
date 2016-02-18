@@ -31,8 +31,8 @@ func (r *configFileReader) Start() <-chan string {
 	return r.out
 }
 
-func NewConfigFileReader(configFile string) (UrlGenerator, error) {
-	var gen UrlGenerator
+func NewConfigFileReader(configFile string) (URLGenerator, error) {
+	var gen URLGenerator
 
 	clean := filepath.Clean(configFile)
 	_, err := os.Stat(clean)

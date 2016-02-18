@@ -31,7 +31,7 @@ func GetAllLinksInTable(urlfile string) {
 
 	client := util.WebClient()
 
-	for k, _ := range urls {
+	for k := range urls {
 		saveLink(client, k)
 	}
 }

@@ -1,5 +1,5 @@
 package gen
 
-type UrlGenerator interface {
+type URLGenerator interface {
 	Start() <-chan string
 }
