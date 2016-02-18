@@ -9,12 +9,13 @@ import (
 	"golang.org/x/net/html"
 
 	"github.com/johnweldon/crawler/data"
+	"github.com/johnweldon/crawler/util"
 )
 
 func NewExtractURLsProcessor(filter data.LinkFilter) UrlProcessor {
 	return &extractURLsProcessor{
 		coreURLsProcessor: coreURLsProcessor{
-			client: &http.Client{},
+			client: util.WebClient(),
 			out:    make(chan string),
 		},
 		filter: filter,

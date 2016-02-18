@@ -13,6 +13,7 @@ import (
 	"github.com/johnweldon/crawler/data"
 	"github.com/johnweldon/crawler/gen"
 	"github.com/johnweldon/crawler/proc"
+	"github.com/johnweldon/crawler/util"
 )
 
 func GetAllLinksInTable(urlfile string) {
@@ -28,7 +29,8 @@ func GetAllLinksInTable(urlfile string) {
 		urls[result] = nil
 	}
 
-	client := &http.Client{}
+	client := util.WebClient()
+
 	for k, _ := range urls {
 		saveLink(client, k)
 	}

@@ -9,6 +9,7 @@ import (
 	"golang.org/x/net/html"
 
 	"github.com/johnweldon/crawler/data"
+	"github.com/johnweldon/crawler/util"
 )
 
 type ExtractTablesProcessor struct {
@@ -18,7 +19,7 @@ type ExtractTablesProcessor struct {
 func NewExtractTablesProcessor() *ExtractTablesProcessor {
 	return &ExtractTablesProcessor{
 		coreURLsProcessor: coreURLsProcessor{
-			client: &http.Client{},
+			client: util.WebClient(),
 			out:    make(chan string),
 		}}
 }
