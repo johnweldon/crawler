@@ -2,6 +2,7 @@ package proc
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -62,7 +63,12 @@ func (d *extractURLsProcessor) getLinks(in <-chan *http.Response) <-chan *data.L
 				tt := z.Next()
 				switch tt {
 				case html.ErrorToken:
-					fmt.Fprintf(os.Stderr, "HTML ERROR: %v\n", z.Err())
+					err := z.Err()
+					switch err {
+					case nil, io.EOF:
+					default:
+						fmt.Fprintf(os.Stderr, "HTML ERROR: %v\n", err)
+					}
 					continue responseLoop
 				case html.TextToken:
 					if inLink {

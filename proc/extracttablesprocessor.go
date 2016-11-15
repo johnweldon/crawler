@@ -2,6 +2,7 @@ package proc
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -59,7 +60,12 @@ func (p *ExtractTablesProcessor) getTables(in <-chan *http.Response) <-chan *dat
 				tt := z.Next()
 				switch tt {
 				case html.ErrorToken:
-					fmt.Fprintf(os.Stderr, "HTML ERROR: %v\n", z.Err())
+					err := z.Err()
+					switch err {
+					case nil, io.EOF:
+					default:
+						fmt.Fprintf(os.Stderr, "HTML ERROR: %v\n", err)
+					}
 					continue responseLoop
 				case html.TextToken:
 					if inTD || inTH {
